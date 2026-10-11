@@ -38,6 +38,11 @@ struct ssam_tmp_profile_info {
 	__le16 unknown2;
 } __packed;
 
+/* SP11: the registry may lack the has_fan property; -1 = use it, 0 = never, 1 = always send fan profile */
+static int fan = -1;
+module_param(fan, int, 0444);
+MODULE_PARM_DESC(fan, "send fan profile to SAM: -1 auto (registry), 0 no, 1 yes");
+
 struct ssam_platform_profile_device {
 	struct ssam_device *sdev;
 	struct device *ppdev;
@@ -228,7 +233,8 @@ static int surface_platform_profile_probe(struct ssam_device *sdev)
 	tpd->sdev = sdev;
 	ssam_device_set_drvdata(sdev, tpd);
 
-	tpd->has_fan = device_property_read_bool(&sdev->dev, "has_fan");
+	tpd->has_fan = fan < 0 ? device_property_read_bool(&sdev->dev, "has_fan") : fan;
+	dev_info(&sdev->dev, "SP11: platform profile, fan profile %s\n", tpd->has_fan ? "on" : "off");
 
 	tpd->ppdev = devm_platform_profile_register(&sdev->dev, "Surface Platform Profile",
 						    tpd, &ssam_platform_profile_ops);
