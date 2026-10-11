@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hwmon/adi,max34417.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Analog Devices MAX34417 Four-Channel Power Accumulator
+
+maintainers:
+  - Friedrich Schrödter <friedrich.schroedter@uni-weimar.de>
+
+description: |
+  The MAX34417 multiplies current-sense and voltage samples of up to four
+  rails and accumulates the power. It is accessed over SMBus.
+
+properties:
+  compatible:
+    const: adi,max34417
+
+  reg:
+    maxItems: 1
+
+  "#address-cells":
+    const: 1
+
+  "#size-cells":
+    const: 0
+
+patternProperties:
+  "^channel@[1-4]$":
+    type: object
+    description: A monitored rail.
+    additionalProperties: false
+
+    properties:
+      reg:
+        description: Channel number, as in the datasheet.
+        minimum: 1
+        maximum: 4
+
+      label:
+        description: Name of the rail.
+
+      shunt-resistor-micro-ohms:
+        description: Value of the current-sense resistor.
+
+    required:
+      - reg
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        power-monitor@14 {
+            compatible = "adi,max34417";
+            reg = <0x14>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            channel@4 {
+                reg = <4>;
+                label = "system";
+                shunt-resistor-micro-ohms = <5000>;
+            };
+        };
+    };
