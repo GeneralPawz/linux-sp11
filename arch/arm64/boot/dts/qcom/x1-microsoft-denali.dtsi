@@ -858,7 +858,10 @@
 
 	status = "okay";
 
-	/* Something @12, @14, @16, @18, @1a */
+	/*
+	 * MAX34417 power accumulators at @12, @14, @16, @18 or @1a; which
+	 * one is fitted depends on the board (see the board .dts).
+	 */
 };
 
 &i2c7 {

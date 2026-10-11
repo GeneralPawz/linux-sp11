@@ -38,6 +38,40 @@
 	};
 };
 
+&i2c4 {
+	/* Rails as named by the firmware's power meter description */
+	power-monitor@14 {
+		compatible = "adi,max34417";
+		reg = <0x14>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		channel@1 {
+			reg = <1>;
+			label = "usb_n";
+			shunt-resistor-micro-ohms = <5000>;
+		};
+
+		channel@2 {
+			reg = <2>;
+			label = "system_n";
+			shunt-resistor-micro-ohms = <5000>;
+		};
+
+		channel@3 {
+			reg = <3>;
+			label = "usb_p";
+			shunt-resistor-micro-ohms = <5000>;
+		};
+
+		channel@4 {
+			reg = <4>;
+			label = "system_p";
+			shunt-resistor-micro-ohms = <5000>;
+		};
+	};
+};
+
 &panel {
 	compatible = "edp-panel";
 	backlight = <&backlight>;
