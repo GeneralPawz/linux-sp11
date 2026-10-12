@@ -2263,6 +2263,21 @@ static bool msm_dp_ctrl_channel_eq_ok(struct msm_dp_ctrl_private *ctrl)
 	return drm_dp_channel_eq_ok(link_status, num_lanes);
 }
 
+/*
+ * The controller's HPD state machine only follows a sink when HPD is wired to
+ * the controller. Over USB-C, HPD is reported out of band (altmode / pmic_glink)
+ * and that state stays "disconnected", so also accept a sink that answers on AUX.
+ */
+static bool msm_dp_ctrl_sink_present(struct msm_dp_ctrl_private *ctrl)
+{
+	u8 rev;
+
+	if (msm_dp_aux_is_link_connected(ctrl->aux))
+		return true;
+
+	return drm_dp_dpcd_readb(ctrl->aux, DP_DPCD_REV, &rev) == 1;
+}
+
 int msm_dp_ctrl_on_link(struct msm_dp_ctrl *msm_dp_ctrl)
 {
 	int rc = 0;
@@ -2313,7 +2328,7 @@ int msm_dp_ctrl_on_link(struct msm_dp_ctrl *msm_dp_ctrl)
 			break;
 		} else if (training_step == DP_TRAINING_1) {
 			/* link train_1 failed */
-			if (!msm_dp_aux_is_link_connected(ctrl->aux))
+			if (!msm_dp_ctrl_sink_present(ctrl))
 				break;
 
 			drm_dp_dpcd_read_link_status(ctrl->aux, link_status);
@@ -2338,7 +2353,7 @@ int msm_dp_ctrl_on_link(struct msm_dp_ctrl *msm_dp_ctrl)
 			}
 		} else if (training_step == DP_TRAINING_2) {
 			/* link train_2 failed */
-			if (!msm_dp_aux_is_link_connected(ctrl->aux))
+			if (!msm_dp_ctrl_sink_present(ctrl))
 				break;
 
 			drm_dp_dpcd_read_link_status(ctrl->aux, link_status);
