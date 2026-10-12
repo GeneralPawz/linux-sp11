@@ -1659,8 +1659,22 @@ static int msm_dp_ctrl_link_train(struct msm_dp_ctrl_private *ctrl,
 	}
 
 	if (ret) {
-		DRM_ERROR("link training of LTTPR(s) failed. ret=%d\n", ret);
-		goto end;
+		/*
+		 * Some LTTPRs never report channel equalization done in
+		 * non-transparent mode, but train fine in transparent mode
+		 * (seen with the Parade PS8830 retimers on the Surface Pro 11).
+		 * DP v2.0 3.6.6.1 allows falling back to transparent mode, so
+		 * train the sink through the repeaters instead of giving up.
+		 */
+		drm_warn(ctrl->drm_dev,
+			 "link training of LTTPR(s) failed (%d), falling back to transparent mode\n",
+			 ret);
+		ret = drm_dp_lttpr_set_transparent_mode(ctrl->aux, true);
+		if (ret) {
+			DRM_ERROR("failed to set LTTPRs transparent. ret=%d\n", ret);
+			goto end;
+		}
+		ctrl->link->lttpr_count = 0;
 	}
 
 	ret = msm_dp_ctrl_link_train_1_2(ctrl, training_step, DP_PHY_DPRX);
