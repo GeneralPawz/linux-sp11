@@ -165,7 +165,13 @@ static irqreturn_t q6v5_handover_interrupt(int irq, void *data)
 	struct qcom_q6v5 *q6v5 = data;
 
 	if (q6v5->handover_issued) {
-		dev_err(q6v5->dev, "Handover signaled, but it already happened\n");
+		/*
+		 * Some firmware (the X1 ADSP while its sensor core streams) keeps
+		 * toggling the ready and handover bits several times a second for
+		 * as long as it runs. That is harmless, but logging every edge
+		 * floods the kernel log.
+		 */
+		dev_warn_once(q6v5->dev, "Handover signaled, but it already happened\n");
 		return IRQ_HANDLED;
 	}
 
