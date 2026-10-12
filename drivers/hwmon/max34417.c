@@ -126,7 +126,7 @@ static void max34417_work(struct work_struct *work)
 	interval = data->interval_ms;
 	mutex_unlock(&data->lock);
 
-	schedule_delayed_work(&data->work, msecs_to_jiffies(interval));
+	queue_delayed_work(system_freezable_wq, &data->work, msecs_to_jiffies(interval));
 }
 
 static int max34417_read(struct device *dev, enum hwmon_sensor_types type,
@@ -192,7 +192,7 @@ static int max34417_write(struct device *dev, enum hwmon_sensor_types type,
 	data->interval_ms = clamp_val(val, MAX34417_MIN_INTERVAL_MS, 60 * MSEC_PER_SEC);
 	mutex_unlock(&data->lock);
 
-	mod_delayed_work(system_wq, &data->work, 0);
+	mod_delayed_work(system_freezable_wq, &data->work, 0);
 
 	return 0;
 }
@@ -319,6 +319,7 @@ static int max34417_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	data->client = client;
+	i2c_set_clientdata(client, data);
 	data->interval_ms = MAX34417_DEFAULT_INTERVAL_MS;
 	ret = devm_mutex_init(dev, &data->lock);
 	if (ret)
@@ -356,12 +357,36 @@ static int max34417_probe(struct i2c_client *client)
 
 	/* Restart accumulation now so the first reading covers one interval */
 	i2c_smbus_write_byte(client, MAX34417_CMD_UPDATE);
-	schedule_delayed_work(&data->work, msecs_to_jiffies(data->interval_ms));
+	queue_delayed_work(system_freezable_wq, &data->work,
+			   msecs_to_jiffies(data->interval_ms));
 
 	dev_info(dev, "MAX34417 revision %d\n", did & 0x7);
 
 	return 0;
 }
+
+static int max34417_suspend(struct device *dev)
+{
+	struct max34417_data *data = dev_get_drvdata(dev);
+
+	cancel_delayed_work_sync(&data->work);
+
+	return 0;
+}
+
+static int max34417_resume(struct device *dev)
+{
+	struct max34417_data *data = dev_get_drvdata(dev);
+
+	/* Restart accumulation so the next reading does not average over the sleep */
+	i2c_smbus_write_byte(data->client, MAX34417_CMD_UPDATE);
+	queue_delayed_work(system_freezable_wq, &data->work,
+			   msecs_to_jiffies(data->interval_ms));
+
+	return 0;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(max34417_pm_ops, max34417_suspend, max34417_resume);
 
 static const struct i2c_device_id max34417_id[] = {
 	{ "max34417" },
@@ -379,6 +404,7 @@ static struct i2c_driver max34417_driver = {
 	.driver = {
 		.name = "max34417",
 		.of_match_table = max34417_of_match,
+		.pm = pm_sleep_ptr(&max34417_pm_ops),
 	},
 	.probe = max34417_probe,
 	.id_table = max34417_id,
