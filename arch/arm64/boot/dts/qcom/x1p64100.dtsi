@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * X1P64100 is hamoa with 10 of the 12 cores: the fourth core of the second
+ * and third cluster is disabled. The firmware marks them disabled in the ACPI
+ * MADT, and PSCI CPU_ON returns INVALID_PARAMETERS for them.
+ */
+
+#include "hamoa.dtsi"
+
+/delete-node/ &cpu7;
+/delete-node/ &cpu11;
+/delete-node/ &cpu_pd7;
+/delete-node/ &cpu_pd11;
+
+&{/cpus/cpu-map/cluster1} {
+	/delete-node/ core3;
+};
+
+&cpu_map_cluster2 {
+	/delete-node/ core3;
+};
